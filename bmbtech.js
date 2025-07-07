@@ -1289,55 +1289,57 @@ if (conf.AUTO_READ === 'yes') {
                 background: '#000000'
             });
             await sticker.toFile("st1.webp");
-var action = await recupererActionJid(origineMessage);
+            // var txt = `@${auteurMsgRepondu.split("@")[0]} a été rétiré du groupe..\n`
+            var action = await atbrecupererActionJid(origineMessage);
 
-if (action === 'remove') {
-    const boxText = `
-╭──────────────────────━⊷
-║  🔗 *Link Detected*
-║════════════════════════
-║  🚫 *User Removed*
-║════════════════════════
-║  👤 @${auteurMessage.split("@")[0]}
-║════════════════════════`;
+              if (action === 'remove') {
 
-    await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") });
-    await (0, baileys_1.delay)(800);
-    await zk.sendMessage(origineMessage, {
-        text: boxText,
-        mentions: [auteurMessage]
-    }, { quoted: ms });
+                txt += `message deleted \n @${auteurMessage.split("@")[0]} removed from group.`;
 
-    try {
-        await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
-    } catch (e) {
-        console.log("antiien ") + e;
+            await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") });
+            (0, baileys_1.delay)(800);
+            await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
+            try {
+                await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
+            }
+            catch (e) {
+                console.log("antibot ") + e;
+            }
+            await zk.sendMessage(origineMessage, { delete: key });
+            await fs.unlink("st1.webp"); } 
+                
+               else if (action === 'delete') {
+                txt += `message delete \n @${auteurMessage.split("@")[0]} Avoid sending link.`;
+                //await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") }, { quoted: ms });
+               await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
+               await zk.sendMessage(origineMessage, { delete: key });
+               await fs.unlink("st1.webp");
+
+            } else if(action === 'warn') {
+                const {getWarnCountByJID ,ajouterUtilisateurAvecWarnCount} = require('./bdd/warn') ;
+
+    let warn = await getWarnCountByJID(auteurMessage) ; 
+    let warnlimit = conf.WARN_COUNT
+ if ( warn >= warnlimit) { 
+  var kikmsg = `bot detected ;you will be remove because of reaching warn-limit`;
+    
+     await zk.sendMessage(origineMessage, { text: kikmsg , mentions: [auteurMessage] }, { quoted: ms }) ;
+
+
+     await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
+     await zk.sendMessage(origineMessage, { delete: key });
+
+
+    } else {
+        var rest = warnlimit - warn ;
+      var  msg = `bot detected , your warn_count was upgrade ;\n rest : ${rest} `;
+
+      await ajouterUtilisateurAvecWarnCount(auteurMessage)
+
+      await zk.sendMessage(origineMessage, { text: msg , mentions: [auteurMessage] }, { quoted: ms }) ;
+      await zk.sendMessage(origineMessage, { delete: key });
+
     }
-    await zk.sendMessage(origineMessage, { delete: key });
-    await fs.unlink("st1.webp");
-
-} else if (action === 'delete') {
-    const boxText = `
-╭──────────────────────━⊷
-║  🔗 *Link Detected*
-║════════════════════════
-║  🗑️ *Message Deleted*
-║════════════════════════
-║  👤 @${auteurMessage.split("@")[0]}
-║════════════════════════`;
-
-    await zk.sendMessage(origineMessage, {
-        text: boxText,
-        mentions: [auteurMessage]
-    }, { quoted: ms });
-    await zk.sendMessage(origineMessage, { delete: key });
-    await fs.unlink("st1.webp");
-
-} else if (action === 'warn') {
-    const { getWarnCountByJID, ajouterUtilisateurAvecWarnCount } = require('./bdd/warn');
-    let warn = await getWarnCountByJID(auteurMessage);
-    // your warn logic here...
-}
                 }
         }
     }
