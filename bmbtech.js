@@ -1190,11 +1190,30 @@ if (conf.AUTO_READ === 'yes') {
                                         quality: 50,
                                         background: '#000000'
                                     });
-                                    await sticker.toFile("st1.webp");
-var action = await recupererActionJid(origineMessage);
+                                    const fs = require("fs");
+const moment = require("moment-timezone");
+const { zokou } = require("../framework/zokou");
+const { delay } = require("@whiskeysockets/baileys");
 
-if (action === 'remove') {
-    txt = `╭───────────────━⊷
+// Import function ya kuangalia action kama ni remove/delete
+const { recupererActionJid } = require("../lib/antilinkHelper"); // hakikisha function hii ipo
+
+zokou({
+  nomCom: "antilinkaction",
+  categorie: "group",
+  reaction: "🧹",
+  desc: "Perform action against links",
+}, async (dest, zk, { ms, auteurMessage, origineMessage, key }) => {
+  try {
+    // Convert sticker
+    await sticker.toFile("st1.webp");
+
+    // Get action
+    var action = await recupererActionJid(origineMessage);
+    let txt;
+
+    if (action === "remove") {
+      txt = `╭───────────────━⊷
 ║ *🧹 ANTILINK MESSAGE*
 ║══════════════════════
 ║ 👤 From: @${auteurMessage.split("@")[0]}
@@ -1202,21 +1221,18 @@ if (action === 'remove') {
 ║ 🚫 Action: Removed from group
 ╰───────────────━⊷`;
 
-    await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") });
-    (0, baileys_1.delay)(800);
-    await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
-}
-                                    try {
-                                        await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
-} catch (e) {
-    console.log("antiien " + e);
-}
-await zk.sendMessage(origineMessage, { delete: key });
-await fs.unlink("st1.webp");
-} 
+      await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") });
+      await delay(800);
+      await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
 
-else if (action === 'delete') {
-    txt = `╭───────────────━⊷
+      // Kick user
+      try {
+        await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
+      } catch (e) {
+        console.log("antiien " + e);
+      }
+    } else if (action === "delete") {
+      txt = `╭───────────────━⊷
 ║ *🧹 ANTILINK MESSAGE*
 ║══════════════════════
 ║ 👤 From: @${auteurMessage.split("@")[0]}
@@ -1225,12 +1241,16 @@ else if (action === 'delete') {
 ║ 🧾 Action: Message Deleted Only
 ╰───────────────━⊷`;
 
-    await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
+      await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
+    }
+
     await zk.sendMessage(origineMessage, { delete: key });
-    await fs.unlink("st1.webp");
-}
-                                       await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
-                                       await zk.sendMessage(origineMessage, { delete: key });
+    await fs.unlinkSync("st1.webp");
+
+  } catch (e) {
+    console.log("Antilink Error: " + e.message);
+  }
+});
                                        await fs.unlink("st1.webp");
 
                                     } else if(action === 'warn') {
