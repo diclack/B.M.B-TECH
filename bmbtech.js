@@ -894,6 +894,113 @@ zk.ev.on("messages.upsert", async (m) => {
     }
 });
 
+// Map keywords to corresponding audio files
+const audioMap = {
+    "hey": "files/hey.wav",
+    "hi": "files/hey.wav",
+    "hey": "files/hey.wav",
+    "he": "files/hey.wav",
+    "hello": "files/hello.wav",
+    "mambo": "files/hey.wav",
+    "niaje": "files/hey.wav",
+    "morning": "files/goodmorning.wav",
+    "goodmorning": "files/goodmorning.wav",
+    "weka up": "files/goodmorning.wav",
+    "night": "files/goodnight.wav",
+    "goodnight": "files/goodnight.wav",
+    "sleep": "files/goodnight.wav",
+    "oyaah": "files/mkuu.wav",
+    "mkuu": "files/mkuu.wav",
+    "mahn": "files/mkuu.wav",
+    "owoh": "files/mkuu.wav",
+    "yoo": "files/mkuu.wav",
+    "wazii": "files/mkuu.wav",
+    "dev": "files/bmb.mp3",
+    "bm": "files/bmb.mp3",
+    "bmbtech": "files/bmb.mp3",
+    "nova": "files/bmb.mp3",
+    "bmb": "files/bmb.mp3",
+    "bot": "files/bmb.mp3",
+    "whatsapp bot": "files/bmb.mp3",
+    "evening": "files/goodevening.wav",
+    "goodevening": "files/goodevening.wav",
+    "darling": "files/darling.wav",
+    "beb": "files/darling.wav",
+    "mpenzi": "files/darling.wav",
+    "afternoon": "files/goodafternoon.wav",
+    "jion": "files/goodafternoon.wav",
+    "kaka": "files/kaka.wav",
+    "bro": "files/morio.mp3",
+    "ndugu": "files/kaka.wav",
+    "morio": "files/morio.mp3",
+    "mzee": "files/morio.mp3",
+    "kijina": "files/mkuu.wav",
+    "mkuu": "files/mkuu.wav",
+     "ozah": "files/mkuu.wav",
+     "ozaah": "files/mkuu.wav",
+    "oyaah": "files/mkuu.wav",
+    "oyah": "files/mkuu.wav",
+
+
+
+
+
+    
+
+};
+
+// Utility to get audio file path for a message
+const getAudioForSentence = (sentence) => {
+    const words = sentence.split(/\s+/); // Split sentence into words
+    for (const word of words) {
+        const audioFile = audioMap[word.toLowerCase()]; // Check each word in sentence
+        if (audioFile) return audioFile; // Return first matched audio file
+    }
+    return null; // Return null if no match
+};
+
+// Auto-reply with audio functionality
+if (conf.AUDIO_REPLY === "yes") {
+    console.log("AUTO_REPLY_AUDIO is enabled. Listening for messages...");
+
+    zk.ev.on("messages.upsert", async (m) => {
+        try {
+            const { messages } = m;
+
+            for (const message of messages) {
+                if (!message.key || !message.key.remoteJid) continue; // Ignore invalid messages
+                
+                const conversationText = message?.message?.conversation || "";
+                const audioFile = getAudioForSentence(conversationText);
+
+                if (audioFile) {
+                    try {
+                        // Check if the audio file exists
+                        await fs.access(audioFile);
+
+                        console.log(`Replying with audio: ${audioFile}`);
+                        await zk.sendMessage(message.key.remoteJid, {
+                            audio: { url: audioFile },
+                            mimetype: "audio/mp4",
+                            ptt: true
+                        });
+
+                        console.log(`Audio reply sent: ${audioFile}`);
+                    } catch (err) {
+                        console.error(`Error sending audio reply: ${err.message}`);
+                    }
+                } else {
+                    console.log("No matching keyword detected. Skipping message.");
+                }
+
+                // Add a delay to prevent spamming
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+            }
+        } catch (err) {
+            console.error("Error in message processing:", err.message);
+        }
+    });
+
         zk.ev.on("call", async (callData) => {
   if (conf.ANTICALL === 'yes') {
     const callId = callData[0].id;
@@ -1190,67 +1297,31 @@ if (conf.AUTO_READ === 'yes') {
                                         quality: 50,
                                         background: '#000000'
                                     });
-                                    const fs = require("fs");
-const moment = require("moment-timezone");
-const { zokou } = require("../framework/zokou");
-const { delay } = require("@whiskeysockets/baileys");
+                                    await sticker.toFile("st1.webp");
+                                    // var txt = `@${auteurMsgRepondu.split("@")[0]} a été rétiré du groupe..\n`
+                                    var action = await recupererActionJid(origineMessage);
 
-// Import function ya kuangalia action kama ni remove/delete
-const { recupererActionJid } = require("../lib/antilinkHelper"); // hakikisha function hii ipo
+                                      if (action === 'remove') {
 
-zokou({
-  nomCom: "antilinkaction",
-  categorie: "group",
-  reaction: "🧹",
-  desc: "Perform action against links",
-}, async (dest, zk, { ms, auteurMessage, origineMessage, key }) => {
-  try {
-    // Convert sticker
-    await sticker.toFile("st1.webp");
+                                        txt += `message deleted \n @${auteurMessage.split("@")[0]} removed from group.`;
 
-    // Get action
-    var action = await recupererActionJid(origineMessage);
-    let txt;
-
-    if (action === "remove") {
-      txt = `╭───────────────━⊷
-║ *🧹 ANTILINK MESSAGE*
-║══════════════════════
-║ 👤 From: @${auteurMessage.split("@")[0]}
-║ 📅 ${moment().tz("Africa/Nairobi").format("DD/MM/YYYY")}
-║ 🚫 Action: Removed from group
-╰───────────────━⊷`;
-
-      await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") });
-      await delay(800);
-      await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
-
-      // Kick user
-      try {
-        await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
-      } catch (e) {
-        console.log("antiien " + e);
-      }
-    } else if (action === "delete") {
-      txt = `╭───────────────━⊷
-║ *🧹 ANTILINK MESSAGE*
-║══════════════════════
-║ 👤 From: @${auteurMessage.split("@")[0]}
-║ 📅 ${moment().tz("Africa/Nairobi").format("DD/MM/YYYY")}
-║ 🔗 Link Detected!
-║ 🧾 Action: Message Deleted Only
-╰───────────────━⊷`;
-
-      await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
-    }
-
-    await zk.sendMessage(origineMessage, { delete: key });
-    await fs.unlinkSync("st1.webp");
-
-  } catch (e) {
-    console.log("Antilink Error: " + e.message);
-  }
-});
+                                    await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") });
+                                    (0, baileys_1.delay)(800);
+                                    await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
+                                    try {
+                                        await zk.groupParticipantsUpdate(origineMessage, [auteurMessage], "remove");
+                                    }
+                                    catch (e) {
+                                        console.log("antiien ") + e;
+                                    }
+                                    await zk.sendMessage(origineMessage, { delete: key });
+                                    await fs.unlink("st1.webp"); } 
+                                        
+                                       else if (action === 'delete') {
+                                        txt += `message deleted \n @${auteurMessage.split("@")[0]} avoid sending link.`;
+                                        // await zk.sendMessage(origineMessage, { sticker: fs.readFileSync("st1.webp") }, { quoted: ms });
+                                       await zk.sendMessage(origineMessage, { text: txt, mentions: [auteurMessage] }, { quoted: ms });
+                                       await zk.sendMessage(origineMessage, { delete: key });
                                        await fs.unlink("st1.webp");
 
                                     } else if(action === 'warn') {
